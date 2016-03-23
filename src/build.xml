@@ -1,0 +1,124 @@
+<!--
+- Arquivo de configuração
+-->
+<project name="Report" default="report" basedir=".">
+
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+	
+	<!-- variaveis definida na task no jankins -->
+	<property environment="env" />
+	<property name="result" 	 value="result.html"/>
+	<property name="path.src"    value="c:/avanxo/workspace/salesforce/sulamerica/SAS - devavanxo/src/objects"/>
+	<property name="path.style"  value="${basedir}/styles"/>
+	<property name="path.temp"   value="${basedir}/temp"/>
+	<property name="path.result" value="${basedir}/result"/>
+	
+	<property name="readFile" value="CondicaoSaudeSegurado__c.object"/>
+	
+	<!-- clean old confs -->
+	<target name="clean">
+		<delete dir="${path.temp}" />
+		<delete dir="${path.result}" />
+		
+		<delete>
+		  <fileset dir="${basedir}" includes="**/*.html"/>
+		</delete>
+	</target>
+	
+	<!-- read all object on folder src -->
+	<target name="sobjects" depends="clean">
+	
+		<mkdir dir="${path.temp}"/>
+		<mkdir dir="${path.result}"/>
+		
+		<foreach target="del_namespace" param="theSobject">
+			<fileset dir="${path.src}">
+				<include name="**/*.object"/>
+			</fileset>
+	    </foreach>
+		
+	</target>
+			
+	<!-- replace namespace form xml -->
+	<target name="del_namespace">
+		
+		<!--
+		<echo message="Processando sObject ${theSobject}"/>
+		-->
+		
+		<script language="javascript"> 
+		<![CDATA[
+			echo = Report.createTask("echo");
+			
+			var arqSobject = Report.getProperty("theSobject").replace(/\\/g,"\/");
+			var arqSRC = Report.getProperty("path.src").replace(/\\/g,"\/");
+			var tmpDir = Report.getProperty("path.temp").replace(/\\/g,"\/");
+			var fileName = arqSobject.replace(arqSRC,'');
+			var resultFile = tmpDir + fileName;
+			
+			Report.setProperty("tmpresult", resultFile);
+			
+			echo = Report.createTask("echo");
+			
+			//echo.setMessage('- sObject: ' + arqSobject);
+			//echo.perform();
+			
+			echo.setMessage('- tmpDir: ' + tmpDir);
+			echo.perform();
+			
+			echo.setMessage('- resultFile: ' + resultFile);
+			echo.perform();
+		]]>
+		</script>
+		
+		<xslt  in="${theSobject}" style="${path.style}/del_namespace.xsl" 
+			  out="${tmpresult}"/>
+	</target>
+	
+	<!-- report object -->
+	<target name="report" depends="sobjects">
+				
+		<foreach target="proc-file" param="theFile">
+			<fileset dir="${path.temp}">
+				<include name="**/*.object"/>
+			</fileset>
+	    </foreach>
+		
+		<delete dir="${path.temp}" />
+	</target>
+	
+	<!-- generete report -->
+	<target name="proc-file">
+		<echo message="Processando OBJETO ${theFile}"/>
+				
+		<script language="javascript"> 
+		<![CDATA[
+			echo = Report.createTask("echo");
+			
+			var arqSobject = Report.getProperty("theFile").replace(/\\/g,"\/").replace('object','html');
+			var tmpDir = Report.getProperty("path.temp").replace(/\\/g,"\/");
+			var resultDir = Report.getProperty("path.result").replace(/\\/g,"\/");
+			var fileName = arqSobject.replace(tmpDir,'');
+			var resultFile = resultDir + fileName;
+			
+			Report.setProperty("fileresult", resultFile);
+			
+			echo = Report.createTask("echo");
+			
+			//echo.setMessage('- sObject: ' + arqSobject);
+			//echo.perform();
+			
+			echo.setMessage('- tmpDir: ' + tmpDir);
+			echo.perform();
+			
+			echo.setMessage('- resultFile: ' + resultFile);
+			echo.perform();
+		]]>
+		</script>
+		
+		<echo message="Set Result HTML ${fileresult}"/>
+		<xslt in="${theFile}" style="${path.style}/obj_style.xsl" 
+			  out="${fileresult}"/>
+	</target>
+
+</project>
